@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Учет ремонта техники</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<nav class="navbar navbar-dark bg-dark mb-4">
+    <div class="container-fluid">
+        <a class="navbar-brand fw-bold" href="/">СервисЦентр (Vega Django)</a>
+        <form class="d-flex" method="GET" action="/">
+            <input class="form-control me-2" type="search" name="q" placeholder="Штрихкод / ID" value="{{ q }}">
+            <button class="btn btn-outline-light" type="submit">Поиск</button>
+        </form>
+    </div>
+</nav>
+
+<div class="container-fluid px-4">
+    <div class="row">
+        <!-- ЛЕВАЯ ПАНЕЛЬ: Форма создания заказа -->
+        <div class="col-lg-3 mb-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white fw-bold">Принять в ремонт</div>
+                <div class="card-body">
+                    <form method="POST">
+                        {% csrf_token %}
+                        <div class="mb-2">
+                            <label class="form-label small text-muted">ID / Штрихкод (необязательно):</label>
+                            <input type="text" name="custom_id" class="form-control form-control-sm" placeholder="Оставьте пустым для авто">
+                        </div>
+                        <div class="mb-2">
+                            <input type="text" name="client_name" class="form-control" placeholder="ФИО Клиента *" required>
+                        </div>
+                        <div class="mb-2">
+                            <input type="text" name="client_phone" class="form-control" placeholder="Телефон *" required>
+                        </div>
+                        <div class="mb-2">
+                            <input type="text" name="device_model" class="form-control" placeholder="Модель техники *" required>
+                        </div>
+                        <div class="mb-3">
+                            <textarea name="issue_description" class="form-control" rows="3" placeholder="Неисправность"></textarea>
+                        </div>
+                        <button type="submit" name="create_repair" class="btn btn-success w-100 fw-bold">Принять заказ</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- ПРАВАЯ ПАНЕЛЬ: Фильтры и таблица -->
+        <div class="col-lg-9">
+            <div class="card shadow-sm border-0 mb-3">
+                <div class="card-body bg-white py-2">
+                    <form method="GET" class="row g-2 align-items-center">
+                        <input type="hidden" name="filter_applied" value="1">
+                        <div class="col-md-2">
+                            <input type="text" name="client" class="form-control form-control-sm" placeholder="Клиент..." value="{{ client }}">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="text" name="device" class="form-control form-control-sm" placeholder="Устройство..." value="{{ device }}">
+                        </div>
+                        <div class="col-md-4">
+                            {% for st in all_statuses %}
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" name="status" value="{{ st }}" id="st_{{ forloop.counter }}" {% if st in selected_statuses %}checked{% endif %}>
+                                <label class="form-check-label small" for="st_{{ forloop.counter }}">{{ st }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-2">
+                            <select name="period" class="form-select form-select-sm">
+                                <option value="all" {% if period == 'all' %}selected{% endif %}>Всё время</option>
+                                <option value="today" {% if period == 'today' %}selected{% endif %}>Сегодня</option>
+                                <option value="week" {% if period == 'week' %}selected{% endif %}>Неделя</option>
+                                <option value="month" {% if period == 'month' %}selected{% endif %}>Месяц</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex gap-1">
+                            <button type="submit" class="btn btn-primary btn-sm w-100">Фильтр</button>
+                            <a href="/" class="btn btn-outline-secondary btn-sm">Сброс</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-bordered mb-0 align-middle">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>ID</th><th>Клиент</th><th>Телефон</th><th>Устройство</th>
+                                <th>Неисправность</th><th>Статус</th><th>Стоимость</th><th>Принят</th><th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in repairs %}
+                            <tr style="background-color: {% if r.status == 'Принято' %}#ffffff{% elif r.status == 'В работе' %}#ffcdd2{% elif r.status == 'Готово' %}#c8e6c9{% elif r.status == 'Выдано' %}#e0e0e0{% endif %};">
+                                <td class="fw-bold">{{ r.id }}</td>
+                                <td>{{ r.client_name }}</td>
+                                <td>{{ r.client_phone }}</td>
+                                <td>{{ r.device_model }}</td>
+                                <td>{{ r.issue_description|truncatechars:30 }}</td>
+                                <td><span class="badge bg-dark">{{ r.status }}</span></td>
+                                <td>{{ r.cost }} ₽</td>
+                                <td>{{ r.accepted_at|date:"d.m.Y H:i" }}</td>
+                                <td>
+                                    <a href="{% url 'repair_detail' r.id %}" class="btn btn-sm btn-outline-primary">Открыть</a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="9" class="text-center py-4 text-muted">Заказы не найдены</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
